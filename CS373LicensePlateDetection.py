@@ -53,7 +53,6 @@ def createInitializedGreyscalePixelArray(image_width, image_height, initValue = 
     new_array = [[initValue for x in range(image_width)] for y in range(image_height)]
     return new_array
 
-# rgb图片转为灰度图
 def computeRGBToGreyscale(pixel_array_r, pixel_array_g, pixel_array_b, image_width, image_height):
     greyscale_pixel_array = createInitializedGreyscalePixelArray(image_width, image_height)
     for y in range(image_height):
@@ -63,7 +62,6 @@ def computeRGBToGreyscale(pixel_array_r, pixel_array_g, pixel_array_b, image_wid
     return greyscale_pixel_array
 
 
-# 使用5x5标准差滤波器
 def computeStandardDeviationImage5x5(pixel_array, image_width, image_height):
     new_arr = createInitializedGreyscalePixelArray(image_width, image_height)
     for x in range(2, image_height - 2, ):
@@ -92,7 +90,6 @@ def computeStandardDeviationImage5x5(pixel_array, image_width, image_height):
     return new_arr
 
 
-# 线性拉缩至0-255
 def scaleTo0And255AndQuantize(pixel_array, image_width, image_height):
     max_v = 0
     min_v = 255
@@ -111,7 +108,6 @@ def scaleTo0And255AndQuantize(pixel_array, image_width, image_height):
                 pixel_array[x][y] = round((pixel_array[x][y] - min_v) * ((255 / (max_v - min_v))))
     return pixel_array
 
-# 使用阈值将图二值化
 threshold_value = 120
 
 
@@ -125,7 +121,6 @@ def computeThresholdGE(pixel_array, threshold_value, image_width, image_height):
     return pixel_array
 
 
-# 扩张
 def computeDilation8Nbh3x3FlatSE(pixel_array, image_width, image_height):
     new_arr = createInitializedGreyscalePixelArray(image_width, image_height)
     for x in range(1, image_height - 1):
@@ -148,7 +143,6 @@ def computeDilation8Nbh3x3FlatSE(pixel_array, image_width, image_height):
     return new_arr
 
 
-# 腐蚀
 def computeErosion8Nbh3x3FlatSE(pixel_array, image_width, image_height):
     new_arr = createInitializedGreyscalePixelArray(image_width, image_height);
     for x in range(1, image_height - 1):
@@ -240,35 +234,26 @@ def main():
     axs1[1, 0].set_title('Input blue channel of image')
     axs1[1, 0].imshow(px_array_b, cmap='gray')
     # STUDENT IMPLEMENTATION here
-    # 将RGB转换为grey
     grey = computeRGBToGreyscale(px_array_r, px_array_g, px_array_b, image_width, image_height)
-    # 拉伸至0到255
     grey_s = scaleTo0And255AndQuantize(grey, image_width, image_height)
-    # 找到高对比区域
     contrast = computeStandardDeviationImage5x5(grey_s, image_width, image_height)
-    # 拉伸至0到255
     contrast_s = scaleTo0And255AndQuantize(contrast, image_width, image_height)
-    # 二值化
     contrast_b = computeThresholdGE(contrast_s, threshold_value, image_width, image_height)
-    # 膨胀
     contrast_d = computeDilation8Nbh3x3FlatSE(contrast_b, image_width, image_height)
-    # 腐蚀
     contrast_e = computeErosion8Nbh3x3FlatSE(contrast_d, image_width, image_height)
     # connect
     connect, sizes = computeConnectedComponentLabeling(contrast_e, image_width, image_height)
-    # 根据面积对sizes的key进行排序
     sizes_list = sorted(sizes.items(), key = lambda kv:(kv[1], kv[0]))
     target_labels = sizes_list[::-1]
-    #这里从最大区域开始遍历，判断连通域的形状长宽比是否满足要求，如果不满足则遍历第二大的连通域，以此类推
+
     for i, (target_label, _) in enumerate(target_labels):
-        # bbox范围
         bbox_min_x = image_width
         bbox_max_x = 0
         bbox_min_y = image_height
         bbox_max_y = 0
         for y in range(image_height):
             for x in range(image_width):
-                if connect[y][x] == target_label: # 找到对应label的像素点
+                if connect[y][x] == target_label: 
                     if y > bbox_max_y:
                         bbox_max_y = y
                     if y < bbox_min_y:
@@ -277,15 +262,13 @@ def main():
                         bbox_max_x = x
                     if x < bbox_min_x:
                         bbox_min_x = x
-        # bbox的长宽
         bbox_height = bbox_max_y - bbox_min_y
         bbox_width = bbox_max_x - bbox_min_x
-        if bbox_width / bbox_height < 8: # 如果长宽比大于一定比例，说明识别错误，没识别到车牌，则遍历下一个面积次大的区域
-            # print(i)
+        if bbox_width / bbox_height < 8: 
+            print(i)
             break
     px_array = px_array_r
 
-    # Draw a bounding box as a rectangle into the input image
     axs1[1, 1].set_title('Final image of detection')
     axs1[1, 1].imshow(px_array, cmap='gray')
     rect = Rectangle((bbox_min_x, bbox_min_y), bbox_max_x - bbox_min_x, bbox_max_y - bbox_min_y, linewidth=1,
